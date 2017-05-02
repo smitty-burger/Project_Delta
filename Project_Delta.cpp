@@ -6,7 +6,7 @@
 //	N/A
 //			
 //Output:
-//  N/A
+//  Captains_Log.txt
 //
 //===========================================================================
 
@@ -78,7 +78,7 @@ int main()
 	double dt = .2;
 
 	// Set Maximum Simulation Time (Seconds)
-	double max_time = 500;
+	double max_time = 150;
 
 	// Number of Generations
 	int gen_num = 10;
@@ -102,7 +102,7 @@ int main()
 		int j = 0;
 		for (j = 0; j < 2 * ship_num; j++)
 		{
-			cout << j << endl;
+			//cout << j << endl;
 			starfleet.fleet_dat.at(j).simulate(dt, max_time);
 		}
 
@@ -231,7 +231,7 @@ void ship::set_inital_conditions()
 
 	// Initial Position of ship
 	x.push_back(50);
-	y.push_back(460);
+	y.push_back(500);
 
 
 	// Position of Goal
@@ -261,6 +261,8 @@ void ship::set_inital_conditions()
 //===========================================================================					mutate
 void ship::mutate()
 {
+	fitness = 0;
+
 	for (int i = 0; i < weight_num; i++)
 	{
 		weights.at(i) = weights.at(i) + (((rand() % 100)) - ((rand() % 100)));
@@ -272,9 +274,29 @@ void ship::calc_compass_heading()
 {
 	//cout << (goal[1] - y.back()) << '\t' << (goal[0] - x.back()) << '\t';
 	compass = atan((goal[1] - y.back()) / (goal[0] - x.back()));
-	cout << theta.back() << endl;
-	compass = theta.back() - compass;
-	//cout << compass << endl;
+	//cout << theta.back() << endl;
+	compass = (compass * (double)180) / 3.1415;
+	int it = 0;
+	///*
+	double com = theta.back();
+	while (it != 1)
+	{
+		if (com >= 180)
+		{
+			com = com - 180;
+		}
+		if (com <= -180)
+		{
+			com = com + 180;
+		}
+		if (com >= -180 && com <= 180)
+		{
+			it = 1;
+		}
+	}
+	//*/
+	compass = com - compass;
+	cout << compass << endl;
 }
 
 //===========================================================================					simulate
@@ -283,7 +305,7 @@ void ship::simulate(double dt, double max_time)
 	// Set Up Neural Network
 	neural_network NN;
 	NN.setup(1, 5, 1);
-	NN.set_in_min_max(0.0, 2 * 3.1415);
+	NN.set_in_min_max(-180, 180);
 	NN.set_out_min_max(-26, 26);
 	NN.set_weights(weights, true);
 
@@ -310,7 +332,8 @@ void ship::simulate(double dt, double max_time)
 		
 		// Fitness of the Ships Captain
 		calc_compass_heading();
-		fitness = fitness + cos(compass) - 1;
+		double compass_r = (compass * 3.1415) / 180;
+		fitness = fitness + cos(compass_r) - 1;
 
 		// Check for Goal Passage
 		double distance_in_one_step = speed * dt * 2;
@@ -325,6 +348,7 @@ void ship::simulate(double dt, double max_time)
 					{
 						fitness = fitness + 200;
 						stime = max_time;
+						cout << "Goal Reached" << endl;
 						break;
 					}
 				}
