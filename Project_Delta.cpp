@@ -62,7 +62,7 @@ public:
 
 // Function Prototypes
 void welcome();
-void print(vector<ship> fleet_dat);
+void print(vector<ship> fleet_dat, vector<ship> every_five);
 
 
 //===========================================================================					main
@@ -75,16 +75,16 @@ int main()
 	welcome();
 
 	// Set Timestep Resolution
-	double dt = .2;
+	double dt = .4;
 
 	// Set Maximum Simulation Time (Seconds)
-	double max_time = 150;
+	double max_time = 100;
 
 	// Number of Generations
-	int gen_num = 10;
+	int gen_num = 20;
 
 	// Initialize Ships
-	int ship_num = 5;
+	int ship_num = 20;
 	fleet starfleet;
 
 	for (int i = 0; i < 2*ship_num; i++)
@@ -93,6 +93,7 @@ int main()
 		drydock.set_inital_conditions();
 		starfleet.fleet_dat.push_back(drydock);
 	}
+	vector<ship> every_five;
 
 	// Loop through Generations
 	for (int i = 0; i < gen_num; i++)
@@ -105,16 +106,39 @@ int main()
 			//cout << j << endl;
 			starfleet.fleet_dat.at(j).simulate(dt, max_time);
 		}
-
+		if (i % 5 == 0)
+		{
+			every_five.push_back(starfleet.fleet_dat.at(j));
+		}
+		if (i + 1 < gen_num)
+		{
 		starfleet.downselect();
 		cout << size(starfleet.fleet_dat) << '\t';
 
 		starfleet.repopulate();
 		cout << size(starfleet.fleet_dat) << endl;
+		}
+		cout << 'test' << endl;
+		if (i % 5 == 0)
+		{
+			int end = starfleet.fleet_dat.size();
+			int best = 0;
+			for (int i = 0; i < end; i++)
+			{
+				if (i > 0)
+				{
+					if (starfleet.fleet_dat.at(i).fitness >= starfleet.fleet_dat.at(best).fitness)
+					{
+						best = i;
+					}
+				}
+			}
+			every_five.push_back(starfleet.fleet_dat.at(best));
+		}
 	}
 
 	// Print to File
-	print(starfleet.fleet_dat);
+	print(starfleet.fleet_dat, every_five);
 
     return 0;
 }
@@ -127,7 +151,7 @@ void welcome()
 }
 
 //===========================================================================					print
-void print(vector<ship> fleet_dat)
+void print(vector<ship> fleet_dat, vector<ship> every_five)
 {
 	// Clear Console Screen
 	// system("CLS");
@@ -140,14 +164,23 @@ void print(vector<ship> fleet_dat)
 	output_file.open("Captains_Log.txt");
 
 	int end = fleet_dat.size();
+	int best = 0;
 	for (int i = 0; i < end; i++)
 	{
 		cout << i << '\t' << fleet_dat.at(i).fitness << endl;
 		//output_file << i << '\t' << fleet_dat.at(i).fitness << endl;
+		if (i > 0)
+		{
+			if (fleet_dat.at(i).fitness >= fleet_dat.at(best).fitness)
+			{
+				best = i;
+			}
+		}
 	}
 
-	int j = 0;
+	int j = best;
 	end = fleet_dat.at(j).x.size();
+	output_file << j << '\t' << 0000 << '\t' << endl;
 	for (int i = 0; i < end; i++)
 	{
 		output_file << fleet_dat.at(j).x.at(i) << '\t' << fleet_dat.at(j).y.at(i) << endl;
@@ -163,6 +196,24 @@ void print(vector<ship> fleet_dat)
 	// Clear Console Screen
 	//system("CLS");
 
+	// Create output file
+	ofstream out_file;
+	out_file.open("Captains_Log_Full.txt");
+
+	end = every_five.at(j).x.size();
+	int walk = every_five.size();
+	for (int i = 0; i < end; i++)
+	{
+		for (int k = 0; k < walk; k++)
+		{
+			out_file << fleet_dat.at(k).x.at(i) << '\t' << fleet_dat.at(k).y.at(i) << '\t\t';
+		}
+		out_file << endl;
+	}
+
+	//Close output file
+	out_file.close();
+
 	//User console update
 	cout << "Data Has Been Written To File" << endl;
 }
@@ -173,9 +224,10 @@ void fleet::repopulate()
 {
 	size_t L = size(fleet_dat);
 	double Len = L;
-
+	cout << "repo" << endl;
 	for (int i = 0; i < Len; i++)
 	{
+		fleet_dat.at(i).fitness = 0;
 		ship spare = fleet_dat.at(i);
 		spare.mutate();
 		fleet_dat.push_back(spare);
@@ -209,12 +261,14 @@ void fleet::downselect()
 		if (fleet_dat.at(opponent_1).fitness >= fleet_dat.at(opponent_2).fitness)
 		{
 			fleet_dat.erase(fleet_dat.begin() + opponent_2);
+
 		}
 		else
 		{
 			fleet_dat.erase(fleet_dat.begin() + opponent_1);
 		}
 	}
+
 	assert(size(fleet_dat) == .5*L);
 	
 }
@@ -230,7 +284,7 @@ void ship::set_inital_conditions()
 	fitness = 0;
 
 	// Initial Position of ship
-	x.push_back(50);
+	x.push_back(800);
 	y.push_back(500);
 
 
@@ -251,7 +305,7 @@ void ship::set_inital_conditions()
 
 	for (int i = 0; i < weight_num; i++)
 	{
-		double we = ((rand() % 100)) - ((rand() % 100));
+		double we = ((rand() % 1000)) - ((rand() % 1000));
 		weights.push_back(we);
 	}
 	// Set Compass
@@ -262,10 +316,18 @@ void ship::set_inital_conditions()
 void ship::mutate()
 {
 	fitness = 0;
+	x.clear();
+	y.clear();
+	theta.clear();
+
+	// Initial Position of ship
+	x.push_back(800);
+	y.push_back(500);
+	theta.push_back(0);
 
 	for (int i = 0; i < weight_num; i++)
 	{
-		weights.at(i) = weights.at(i) + (((rand() % 100)) - ((rand() % 100)));
+		weights.at(i) = weights.at(i) + (((rand() % 1000)) - ((rand() % 1000)));
 	}
 }
 
@@ -296,7 +358,7 @@ void ship::calc_compass_heading()
 	}
 	//*/
 	compass = com - compass;
-	cout << compass << endl;
+	//cout << compass << endl;
 }
 
 //===========================================================================					simulate
@@ -306,7 +368,7 @@ void ship::simulate(double dt, double max_time)
 	neural_network NN;
 	NN.setup(1, 5, 1);
 	NN.set_in_min_max(-180, 180);
-	NN.set_out_min_max(-26, 26);
+	NN.set_out_min_max(-15, 15);
 	NN.set_weights(weights, true);
 
 	vector<double> compass_temp;
@@ -322,7 +384,7 @@ void ship::simulate(double dt, double max_time)
 		//cout << compass << endl;
 		NN.set_vector_input(compass_temp);
 		NN.execute();
-		u = NN.get_output(0) *.01;
+		u = NN.get_output(0) *.001 ;
 		omega = (omega + (u - omega * dt / T));
 		theta.push_back(theta.at(i) + omega * dt);
 		y.push_back(y.at(i) + speed * sin(theta.at(i + 1)) * dt);
@@ -333,7 +395,7 @@ void ship::simulate(double dt, double max_time)
 		// Fitness of the Ships Captain
 		calc_compass_heading();
 		double compass_r = (compass * 3.1415) / 180;
-		fitness = fitness + cos(compass_r) - 1;
+		fitness = fitness + (cos(compass_r) - 1) * .1;
 
 		// Check for Goal Passage
 		double distance_in_one_step = speed * dt * 2;
@@ -346,10 +408,9 @@ void ship::simulate(double dt, double max_time)
 				{
 					if (y.at(i) < goal[1] + goal[2])
 					{
-						fitness = fitness + 200;
-						stime = max_time;
-						cout << "Goal Reached" << endl;
-						break;
+						fitness = fitness + 20000;
+						stime = max_time + 1;
+						cout << "Goal Reached " << fitness << endl;
 					}
 				}
 			}
@@ -359,7 +420,7 @@ void ship::simulate(double dt, double max_time)
 		if (x.at(i) > 1000 || x.at(i) < 0 || y.at(i) > 1000 || y.at(i) < 0)
 		{
 			fitness = fitness - 5000;
-			stime = max_time;
+			stime = max_time + 1;
 			break;
 		}
 	}
